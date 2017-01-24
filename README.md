@@ -111,6 +111,8 @@ Example of an utility code to encrypt the requests
 	
 ```
 
+Code exemple to request
+
 ```java
 
 import io.swagger.client.*;
