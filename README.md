@@ -56,50 +56,119 @@ Then manually install the following JARs:
 
 Please follow the [installation](#installation) instruction and execute the following Java code:
 
+Example of an utility method to encrypt AES key with de public key
+
 ```java
 
-import io.swagger.client.*;
-import io.swagger.client.auth.*;
-import io.swagger.client.model.*;
-import io.swagger.client.api.CartoesApi;
+ 	public static void encryptAESKey(String keyId, String key, String publicKey) throws Exception {
 
-import java.io.File;
-import java.util.*;
+		sun.misc.BASE64Decoder decoder = new sun.misc.BASE64Decoder();
+		byte[] sigBytes = decoder.decodeBuffer(publicKey);
+		java.security.spec.X509EncodedKeySpec x509KeySpec = new java.security.spec.X509EncodedKeySpec(sigBytes);
+		java.security.KeyFactory keyFact = java.security.KeyFactory.getInstance(Algorithms.RSA);
+		java.security.PublicKey pubKey = keyFact.generatePublic(x509KeySpec);
 
-public class CartoesApiExample {
+		Key aesKey = new SecretKeySpec(key.getBytes(), "AES");
 
-    public static void main(String[] args) {
-        ApiClient defaultClient = Configuration.getDefaultApiClient();
-        
-        // Configure API key authorization: access_token
-        ApiKeyAuth access_token = (ApiKeyAuth) defaultClient.getAuthentication("access_token");
-        access_token.setApiKey("YOUR API KEY");
-        // Uncomment the following line to set a prefix for the API key, e.g. "Token" (defaults to null)
-        //access_token.setApiKeyPrefix("Token");
+		javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("RSA");
+		cipher.init(Cipher.ENCRYPT_MODE, pubKey);
+		byte[] encrypted = cipher.doFinal(aesKey.getEncoded());
+		key = org.apache.commons.codec.binary.Base64.encodeBase64String(encrypted);
+		
+		/*
+		(POST - https://api-visa.sensedia.com/security/v1/keys)
+		 {
+		 "id": keyId,
+		 "key": key
+		 }
+		*/
+	}
+	
+```
 
-        // Configure API key authorization: key_id
-        ApiKeyAuth key_id = (ApiKeyAuth) defaultClient.getAuthentication("key_id");
-        key_id.setApiKey("YOUR API KEY");
-        // Uncomment the following line to set a prefix for the API key, e.g. "Token" (defaults to null)
-        //key_id.setApiKeyPrefix("Token");
+Example of an utility code to encrypt the requests
 
-        // Configure API key authorization: client_id
-        ApiKeyAuth client_id = (ApiKeyAuth) defaultClient.getAuthentication("client_id");
-        client_id.setApiKey("YOUR API KEY");
-        // Uncomment the following line to set a prefix for the API key, e.g. "Token" (defaults to null)
-        //client_id.setApiKeyPrefix("Token");
+```java
 
-        CartoesApi apiInstance = new CartoesApi();
-        String tipoCartao = "fisico"; // String | Identifica qual o tipo do cartão, físico ou virtual.
-        try {
-            CartaoDisponivel result = apiInstance.cartoesGet(tipoCartao);
-            System.out.println(result);
-        } catch (ApiException e) {
-            System.err.println("Exception when calling CartoesApi#cartoesGet");
-            e.printStackTrace();
-        }
-    }
-}
+		try {
+			
+			byte[] cipherText = null;
+			final javax.crypto.Cipher cipher = Cipher.getInstance(Algorithms.AES);
+			
+			java.security.Key aesKey = new javax.crypto.spec.SecretKeySpec(key.getBytes(), Algorithms.AES);
+			cipher.init(Cipher.ENCRYPT_MODE, aesKey);
+			
+			String clientId = org.apache.commons.codec.binary.Base64.encodeBase64String(cipher.doFinal("CLIENT_ID".getBytes()));
+			
+			// ACCESS_TOKEN format = accessToken_yyyy-MM-dd HH:mm:ss.SSS			
+			String accessToken = org.apache.commons.codec.binary.Base64.encodeBase64String(cipher.doFinal("ACCESS_TOKEN".getBytes()));
+			
+			String body = org.apache.commons.codec.binary.Base64.encodeBase64String(cipher.doFinal("BODY".getBytes()));
+			
+		} catch (java.lang.Exception e) {
+			new java.lang.RuntimeException(e);
+		}
+	
+```
+
+```java
+
+	import io.swagger.client.*;
+	import io.swagger.client.auth.*;
+	import io.swagger.client.model.*;
+	import io.swagger.client.api.CartoesApi;
+
+	import java.io.File;
+	import java.util.*;
+
+	public class CartoesApiExample {
+
+		public static void main(String[] args) {		 
+				try {
+					byte[] cipherText = null;
+					final javax.crypto.Cipher cipher = Cipher.getInstance(Algorithms.AES);
+
+					java.security.Key aesKey = new javax.crypto.spec.SecretKeySpec("AES_KEY", Algorithms.AES);
+					cipher.init(Cipher.ENCRYPT_MODE, aesKey);
+
+					String clientId = org.apache.commons.codec.binary.Base64.encodeBase64String(cipher.doFinal("CLIENT_ID".getBytes()));
+					String accessToken = org.apache.commons.codec.binary.Base64.encodeBase64String(cipher.doFinal("ACCESS_TOKEN".getBytes()));
+					
+				} catch (java.lang.Exception e) {
+					new java.lang.RuntimeException(e);
+				}
+
+				ApiClient defaultClient = Configuration.getDefaultApiClient();
+
+				// Configure API key authorization: access_token
+				ApiKeyAuth access_token = (ApiKeyAuth) defaultClient.getAuthentication("access_token");
+				access_token.setApiKey(accessToken);
+				// Uncomment the following line to set a prefix for the API key, e.g. "Token" (defaults to null)
+				//access_token.setApiKeyPrefix("Token");
+
+				// Configure API key authorization: key_id
+				ApiKeyAuth key_id = (ApiKeyAuth) defaultClient.getAuthentication("key_id");
+				key_id.setApiKey("KEY_ID");
+				// Uncomment the following line to set a prefix for the API key, e.g. "Token" (defaults to null)
+				//key_id.setApiKeyPrefix("Token");
+
+				// Configure API key authorization: client_id
+				ApiKeyAuth client_id = (ApiKeyAuth) defaultClient.getAuthentication("client_id");
+				client_id.setApiKey(clientId);
+				// Uncomment the following line to set a prefix for the API key, e.g. "Token" (defaults to null)
+				//client_id.setApiKeyPrefix("Token");
+
+				CartoesApi apiInstance = new CartoesApi();
+				String tipoCartao = "fisico"; // String | Identifica qual o tipo do cartão, físico ou virtual.
+				try {
+					CartaoDisponivel result = apiInstance.cartoesGet(tipoCartao);
+					System.out.println(result);
+				} catch (ApiException e) {
+					System.err.println("Exception when calling CartoesApi#cartoesGet");
+					e.printStackTrace();
+				}
+			}
+		}
 
 ```
 
